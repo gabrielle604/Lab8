@@ -1,0 +1,159 @@
+---
+title: "lab8"
+author: "Gabrielle"
+date: '2022-11-14'
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, results = FALSE)
+library(tidyverse)
+library(here)
+library(ggpubr)
+library(janitor)
+library(broom)
+library(knitr)
+```
+
+# lab 8: dummy variables, tables, and model selection using BIC
+
+### load in the data
+```{r}
+penguins <- read_csv(here("data", "penguins.csv"))
+```
+
+
+### examples of pairs() and cor()
+```{r, results = TRUE}
+penguins_mod <- penguins %>% 
+  select(bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g) %>% 
+  drop_na()
+# selecting the continuous variables, and not the discrete ones, because correlation wouldn't look right for discrete variables
+
+pairs(penguins_mod)
+cor(penguins_mod)
+```
+
+## Linear models
+```{r}
+# new data set
+penguins_Adelie_Torgersen <- penguins %>% 
+  filter(species == "Adelie") %>% 
+  filter(island == "Torgersen") %>% 
+  drop_na()
+```
+
+## models
+```{r}
+model_0 <- lm(body_mass_g ~ 1, data = penguins_Adelie_Torgersen)
+# a regression without anything in "x" it's the mean of the variable y
+
+model_1 <- lm(body_mass_g ~ flipper_length_mm, data = penguins_Adelie_Torgersen)
+# body mass is a function of flipper length
+
+model_2 <- lm(body_mass_g ~ sex, data = penguins_Adelie_Torgersen)
+# body mass is a function of sex
+
+model_3 <- lm(body_mass_g ~ flipper_length_mm + sex, data = penguins_Adelie_Torgersen)
+# body mass is a function of flipper length coupled with the sex
+
+
+
+## model outputs saved to data
+
+model_0_out <- summary(model_0)
+
+model_1_out <- summary(model_1)
+
+model_2_out <- summary(model_2)
+
+model_3_out <- summary(model_3)
+
+### now we can start using the model results and make data tables
+
+```
+
+
+Model 0 This null model captures the idea that there is no explanatory power of flipper length or sex. It is useful for comparison to other models with more complexity.
+
+Model 1 This model is a simple linear regression.
+
+Model 2 This model with only a dummy variable for sex.
+
+Model 3 This model with a dummy variable for sex and a continuous variable of flipper length.
+
+
+**Model 0**
+```{r, results = TRUE}
+out_0_tidy <- tidy(model_0)
+out_0_tidy
+# 'straw man stupid test'... is the penguin mass different than zero... well yes, of course it is
+
+out_0_glance <- glance(model_0)
+out_0_glance
+# r squared is zero because there is only one variable
+# sigma, variance of the residuals
+# we're not testing a regression model, so many of the results are NA
+# there is a model being run, so you can see the logLik and AIC and BIC
+
+kable(out_0_tidy, format = "markdown", digits = 3, caption = "Tests of linear model (model 0) coefficients")
+
+kable(out_0_glance, format = "markdown", digits = 3, caption = "Tests of linear model (model 0)")
+
+```
+
+
+**Model 1**
+```{r, results = TRUE}
+out_1_tidy <- tidy(model_1)
+out_1_tidy
+
+out_1_glance <- glance(model_1)
+out_1_glance
+
+kable(out_1_tidy, format = "markdown", digits = 3, caption = "Tests of linear model (model 1) coefficients")
+
+kable(out_1_glance, format = "markdown", digits = 3, caption = "Tests of linear model (model 1)")
+
+```
+
+
+
+**Model 2**
+```{r, results = TRUE}
+out_2_tidy <- tidy(model_2)
+out_2_tidy
+
+out_2_glance <- glance(model_2)
+out_2_glance
+
+kable(out_2_tidy, format = "markdown", digits = 3, caption = "Tests of linear model (model 2) coefficients")
+
+kable(out_2_glance, format = "markdown", digits = 3, caption = "Tests of linear model (model 2)")
+
+```
+
+
+
+**Model 3**
+```{r, results = TRUE}
+out_3_tidy <- tidy(model_3)
+out_3_tidy
+
+out_3_glance <- glance(model_3)
+out_3_glance
+
+kable(out_3_tidy, format = "markdown", digits = 3, caption = "Tests of linear model (model 3) coefficients")
+
+kable(out_3_glance, format = "markdown", digits = 3, caption = "Tests of linear model (model 3)")
+
+
+```
+
+
+
+
+
+
