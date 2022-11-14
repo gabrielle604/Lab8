@@ -704,6 +704,9 @@ out_1_glance</code></pre>
 </tr>
 </tbody>
 </table>
+<pre class="r"><code># the intercept is nonsensical
+# including the intercept didn&#39;t add much to our interpretation
+# we can only make an inference for the data range we have</code></pre>
 <p><strong>Model 2</strong></p>
 <pre class="r"><code>out_2_tidy &lt;- tidy(model_2)
 out_2_tidy</code></pre>
@@ -749,7 +752,9 @@ out_2_glance</code></pre>
 </tr>
 </tbody>
 </table>
-<pre class="r"><code>kable(out_2_glance, format = &quot;markdown&quot;, digits = 3, caption = &quot;Tests of linear model (model 2)&quot;)</code></pre>
+<pre class="r"><code># this is essentially a t-test
+
+kable(out_2_glance, format = &quot;markdown&quot;, digits = 3, caption = &quot;Tests of linear model (model 2)&quot;)</code></pre>
 <table>
 <caption>Tests of linear model (model 2)</caption>
 <colgroup>
@@ -799,6 +804,27 @@ out_2_glance</code></pre>
 </tr>
 </tbody>
 </table>
+<p>note the lower BIC than model_1, which is telling us that clearly add
+sex to the model tells us something</p>
+<p>An aside How does model 2 compare to a two sample t-test? Look at the
+t values and p values of the t test and the dummy variable “sexmale”
+output with lm(). Punchline, two sample t-tests can be a model within a
+suite of linear models by using dummy variable (two factors, i.e. males
+or females). With more factors (2+) and the use of dummy variables, we
+can do ANOVA.</p>
+<pre class="r"><code>#t-test code
+
+male &lt;- penguins_Adelie_Torgersen %&gt;% 
+  filter(sex==&quot;male&quot;)
+
+male &lt;- male$body_mass_g
+
+female &lt;- penguins_Adelie_Torgersen %&gt;% 
+  filter(sex==&quot;female&quot;)
+
+female &lt;- female$body_mass_g
+
+t.test(male,female,var.equal = TRUE)</code></pre>
 <p><strong>Model 3</strong></p>
 <pre class="r"><code>out_3_tidy &lt;- tidy(model_3)
 out_3_tidy</code></pre>
@@ -902,6 +928,118 @@ out_3_glance</code></pre>
 </tr>
 </tbody>
 </table>
+<div id="model-2-appears-to-be-the-best-model" class="section level3">
+<h3>model 2 appears to be the best model</h3>
+<p>delta BIC of about 4 is a weak indication; they’re doing about the
+same job; flipper length isn’t telling us much; might just want to use
+the variable sex</p>
+<p>conclusion: the variation in the body mass is driven by sex</p>
+</div>
+</div>
+<div id="example-of-model-selection" class="section level2">
+<h2>Example of Model Selection</h2>
+<p>Another approach to choosing the “best model” is using information
+criteria. Here we will use the BIC (The Bayesian Information Criteria)
+also known as the SIC as it should not be confused with Bayesian
+Statistics. The BIC is robust and has better error properties than the
+AIC, The Akaike’s Information Criteria, a very popular and commonly
+applied model selection function. However, see this recent publication
+for why BIC should be used over AIC here.</p>
+<p>The BIC is:</p>
+<p>SIC=ln(n)∗k−2∗ln(L)</p>
+<p>where, n is the number of observations, k is the number of
+parameters, and L is the likelihood. All of these values can be pulled
+from the model statistics in the lm() output.</p>
+<p>Condensing the tables // pull out the BIC values into a table to make
+them readable</p>
+<pre class="r"><code># We can call the BIC directly or as a list of models like this:
+BIC_list &lt;- c(BIC(model_0), BIC(model_1), BIC(model_2), BIC(model_3))
+BIC_list</code></pre>
+</div>
+<div id="a-method-using-data.frame" class="section level2">
+<h2>A method using data.frame</h2>
+<pre class="r"><code># we may want to merge data and select only certain model statistics. 
+# here is a way to manipulate the data to get a table
+
+model_output &lt;- rbind(data.frame(glance(model_0)),data.frame(glance(model_1)),data.frame(glance(model_2)),data.frame(glance(model_3))) %&gt;% 
+  select(adj.r.squared, BIC)
+
+model_output</code></pre>
+<pre><code>##   adj.r.squared      BIC
+## 1     0.0000000 714.7239
+## 2     0.1929307 707.4668
+## 3     0.4996689 684.9942
+## 4     0.4964492 688.0896</code></pre>
+<pre class="r"><code>model_output_1 &lt;- mutate(model_output, delta.BIC = BIC-min(BIC_list))
+
+model_output_1</code></pre>
+<pre><code>##   adj.r.squared      BIC delta.BIC
+## 1     0.0000000 714.7239 29.729666
+## 2     0.1929307 707.4668 22.472557
+## 3     0.4996689 684.9942  0.000000
+## 4     0.4964492 688.0896  3.095404</code></pre>
+<pre class="r"><code># add a column that labels each model within the table!
+model_output_1$model &lt;- c(&quot;Model 0&quot;, &quot;Model 1&quot;, &quot;Model 2&quot;, &quot;Model 3&quot;)
+
+model_output_1</code></pre>
+<pre><code>##   adj.r.squared      BIC delta.BIC   model
+## 1     0.0000000 714.7239 29.729666 Model 0
+## 2     0.1929307 707.4668 22.472557 Model 1
+## 3     0.4996689 684.9942  0.000000 Model 2
+## 4     0.4964492 688.0896  3.095404 Model 3</code></pre>
+<pre class="r"><code># rearrange the order of the columns
+model_output_1 &lt;- model_output_1[,c(&quot;model&quot;, &quot;adj.r.squared&quot;, &quot;BIC&quot;, &quot;delta.BIC&quot;)]
+model_output_1</code></pre>
+<pre><code>##     model adj.r.squared      BIC delta.BIC
+## 1 Model 0     0.0000000 714.7239 29.729666
+## 2 Model 1     0.1929307 707.4668 22.472557
+## 3 Model 2     0.4996689 684.9942  0.000000
+## 4 Model 3     0.4964492 688.0896  3.095404</code></pre>
+<pre class="r"><code># even though adj.r.squared is a frequentist term, it is still informative
+# here, you can see that the r squared on model 2 and model 3 are really similar
+
+kable(model_output_1, format = &quot;markdown&quot;, digits = 3, caption = &quot;R-Squared Adjusted, BIC, and delta BIC for the penguin models. Delta BIC &gt;7 indicates models that should be dismissed from further consideration.&quot;)</code></pre>
+<table>
+<caption>R-Squared Adjusted, BIC, and delta BIC for the penguin models.
+Delta BIC &gt;7 indicates models that should be dismissed from further
+consideration.</caption>
+<thead>
+<tr class="header">
+<th align="left">model</th>
+<th align="right">adj.r.squared</th>
+<th align="right">BIC</th>
+<th align="right">delta.BIC</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Model 0</td>
+<td align="right">0.000</td>
+<td align="right">714.724</td>
+<td align="right">29.730</td>
+</tr>
+<tr class="even">
+<td align="left">Model 1</td>
+<td align="right">0.193</td>
+<td align="right">707.467</td>
+<td align="right">22.473</td>
+</tr>
+<tr class="odd">
+<td align="left">Model 2</td>
+<td align="right">0.500</td>
+<td align="right">684.994</td>
+<td align="right">0.000</td>
+</tr>
+<tr class="even">
+<td align="left">Model 3</td>
+<td align="right">0.496</td>
+<td align="right">688.090</td>
+<td align="right">3.095</td>
+</tr>
+</tbody>
+</table>
+<p>Model 2 is clearly the best, but model 3 is also performing okay.
+Model 0 and model 1 can be thrown out</p>
 </div>
 </div>
 

@@ -117,6 +117,9 @@ kable(out_1_tidy, format = "markdown", digits = 3, caption = "Tests of linear mo
 
 kable(out_1_glance, format = "markdown", digits = 3, caption = "Tests of linear model (model 1)")
 
+# the intercept is nonsensical
+# including the intercept didn't add much to our interpretation
+# we can only make an inference for the data range we have
 ```
 
 
@@ -130,9 +133,30 @@ out_2_glance <- glance(model_2)
 out_2_glance
 
 kable(out_2_tidy, format = "markdown", digits = 3, caption = "Tests of linear model (model 2) coefficients")
+# this is essentially a t-test
 
 kable(out_2_glance, format = "markdown", digits = 3, caption = "Tests of linear model (model 2)")
 
+```
+
+note the lower BIC than model_1, which is telling us that clearly add sex to the model tells us something
+
+An aside How does model 2 compare to a two sample t-test? Look at the t values and p values of the t test and the dummy variable “sexmale” output with lm(). Punchline, two sample t-tests can be a model within a suite of linear models by using dummy variable (two factors, i.e. males or females). With more factors (2+) and the use of dummy variables, we can do ANOVA.
+
+```{r}
+#t-test code
+
+male <- penguins_Adelie_Torgersen %>% 
+  filter(sex=="male")
+
+male <- male$body_mass_g
+
+female <- penguins_Adelie_Torgersen %>% 
+  filter(sex=="female")
+
+female <- female$body_mass_g
+
+t.test(male,female,var.equal = TRUE)
 ```
 
 
@@ -153,7 +177,59 @@ kable(out_3_glance, format = "markdown", digits = 3, caption = "Tests of linear 
 ```
 
 
+### model 2 appears to be the best model
+delta BIC of about 4 is a weak indication; they're doing about the same job; flipper length isn't telling us much; might just want to use the variable sex
 
+conclusion: the variation in the body mass is driven by sex
+
+
+## Example of Model Selection
+Another approach to choosing the “best model” is using information criteria. Here we will use the BIC (The Bayesian Information Criteria) also known as the SIC as it should not be confused with Bayesian Statistics. The BIC is robust and has better error properties than the AIC, The Akaike’s Information Criteria, a very popular and commonly applied model selection function. However, see this recent publication for why BIC should be used over AIC here.
+
+The BIC is:
+
+SIC=ln(n)∗k−2∗ln(L)
+
+where, n is the number of observations, k is the number of parameters, and L is the likelihood. All of these values can be pulled from the model statistics in the lm() output.
+
+Condensing the tables // pull out the BIC values into a table to make them readable
+
+```{r}
+# We can call the BIC directly or as a list of models like this:
+BIC_list <- c(BIC(model_0), BIC(model_1), BIC(model_2), BIC(model_3))
+BIC_list
+```
+
+## A method using data.frame
+
+```{r, results = TRUE}
+# we may want to merge data and select only certain model statistics. 
+# here is a way to manipulate the data to get a table
+
+model_output <- rbind(data.frame(glance(model_0)),data.frame(glance(model_1)),data.frame(glance(model_2)),data.frame(glance(model_3))) %>% 
+  select(adj.r.squared, BIC)
+
+model_output
+
+model_output_1 <- mutate(model_output, delta.BIC = BIC-min(BIC_list))
+
+model_output_1
+
+# add a column that labels each model within the table!
+model_output_1$model <- c("Model 0", "Model 1", "Model 2", "Model 3")
+
+model_output_1
+
+# rearrange the order of the columns
+model_output_1 <- model_output_1[,c("model", "adj.r.squared", "BIC", "delta.BIC")]
+model_output_1
+
+# even though adj.r.squared is a frequentist term, it is still informative
+# here, you can see that the r squared on model 2 and model 3 are really similar
+
+kable(model_output_1, format = "markdown", digits = 3, caption = "R-Squared Adjusted, BIC, and delta BIC for the penguin models. Delta BIC >7 indicates models that should be dismissed from further consideration.")
+```
+Model 2 is clearly the best, but model 3 is also performing okay. Model 0 and model 1 can be thrown out
 
 
 
